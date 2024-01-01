@@ -1,0 +1,18 @@
+version: '3'
+services:
+  app:
+    image: node:16
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: npm run dev
+    ports:
+      - 3000:3000
+  db:
+    image: mongo
+    volumes:
+      - mongodb_data:/data/db
+    ports:
+      - 27017:27017
+volumes:
+  mongodb_data:
