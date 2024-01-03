@@ -6,12 +6,7 @@ const userSchema = new mongoose.Schema({
     minlength: 3,
     required: true,
   },
-  authMethod: {
-    type: String,
-    enum: ["local", "google"],
-    required: true,
-  },
-  passwordHash: {
+  passwordHashed: {
     type: String,
   },
   email: {
@@ -25,18 +20,21 @@ const userSchema = new mongoose.Schema({
         `${props.value} is not a valid email!`,
     },
   },
+  authMethod: {
+    type: String,
+    enum: ["local", "google"],
+    required: true,
+  },
   googleId: {
     type: String,
   },
   accessToken: {
     type: String,
   },
-  cars: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Car",
-    },
-  ],
+  isVerified: {
+    type: Boolean,
+    default: false,
+  },
   parklist: [
     {
       type: mongoose.Schema.Types.ObjectId,
