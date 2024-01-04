@@ -7,6 +7,8 @@ export interface User extends Document {
   authMethod: string;
   googleId?: string;
   accessToken?: string;
+  isAdmin: boolean;
   isVerified: boolean;
+  emailVerificationToken?: string;
   parklist?: Schema.Types.ObjectId[];
 }
