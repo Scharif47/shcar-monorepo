@@ -1,8 +1,9 @@
 import express from "express";
 import mongoose from "mongoose";
-import session from "express-session";
 import MongoDBStore from "connect-mongodb-session";
 import dotenv from "dotenv";
+
+const session = require('express-session');
 
 dotenv.config();
 
@@ -38,10 +39,6 @@ app.use(
     saveUninitialized: false,
   })
 );
-
-app.get("/", (req, res) => {
-  res.send("Hello Friend!" + JSON.stringify(req.session));
-});
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);

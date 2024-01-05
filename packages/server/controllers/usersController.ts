@@ -1,5 +1,4 @@
-import { Request, Response } from "express";
-import { SessionData } from "express-session";
+import { Request, Response, NextFunction } from "express";
 import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from "uuid";
 import User from "../models/User";
@@ -21,10 +20,7 @@ export const getUsers = async (req: Request, res: Response) => {
   }
 };
 
-export const getUser = async (
-  req: Request & { session: SessionData },
-  res: Response
-) => {
+export const getUser = async (req: Request, res: Response) => {
   const { userId } = req.session;
 
   if (!userId) {
@@ -45,10 +41,41 @@ export const getUser = async (
   }
 };
 
-export const createUser = async (
-  req: Request & { session: SessionData },
-  res: Response
-) => {
+export const updateUser = async (req: Request, res: Response) => {
+  const { userId } = req.session;
+
+  if (!userId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const updates = req.body;
+
+  try {
+    const user = (await User.findByIdAndUpdate(userId, updates, {
+      new: true,
+    })) as UserInterface;
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.json(user);
+  } catch (err) {
+    if (err instanceof Error) {
+      res.status(500).json({ message: err.message });
+    } else {
+      res
+        .status(500)
+        .json({ message: "An unknown error occurred while updating the user" });
+    }
+  }
+};
+
+export const registerUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<Response | void> => {
   const { userName, password, email, authMethod, googleId, accessToken } =
     req.body;
 
@@ -78,7 +105,7 @@ export const createUser = async (
     // Create user
     const user = new User({
       userName,
-      passwordHashed,
+      passwordHashed: authMethod === "local" ? passwordHashed : undefined,
       email,
       authMethod,
       googleId,
@@ -89,7 +116,11 @@ export const createUser = async (
     // Create a session for the user
     req.session.userId = newUser._id.toString();
 
-    res.status(201).json(newUser);
+    res.status(201).json({
+      id: newUser._id,
+      userName: newUser.userName,
+      email: newUser.email,
+    });
   } catch (err) {
     if (err instanceof Error) {
       res.status(500).json({ message: err.message });
@@ -101,10 +132,7 @@ export const createUser = async (
   }
 };
 
-export const loginUser = async (
-  req: Request & { session: SessionData },
-  res: Response
-) => {
+export const loginUser = async (req: Request, res: Response) => {
   const { userName, password } = req.body;
 
   if (!userName || !password) {
@@ -137,10 +165,7 @@ export const loginUser = async (
   }
 };
 
-export const logoutUser = async (
-  req: Request & { session?: SessionData },
-  res: Response
-) => {
+export const logoutUser = async (req: Request, res: Response) => {
   if (req.session) {
     req.session.destroy((err) => {
       if (err) {
@@ -156,35 +181,24 @@ export const logoutUser = async (
   }
 };
 
-export const updateUser = async (
-  req: Request & { session: SessionData },
-  res: Response
-) => {
-  const { userId } = req.session;
-
-  if (!userId) {
+export const deleteUser = async (req: Request, res: Response) => {
+  // Check if user is admin
+  if (!req.session.isAdmin) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
-  const updates = req.body;
+  const { userId } = req.params;
 
   try {
-    const user = (await User.findByIdAndUpdate(userId, updates, {
-      new: true,
-    })) as UserInterface;
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    return res.json(user);
+    await User.findByIdAndDelete(userId);
+    return res.json({ message: "User deleted successfully" });
   } catch (err) {
     if (err instanceof Error) {
       res.status(500).json({ message: err.message });
     } else {
-      res
-        .status(500)
-        .json({ message: "An unknown error occurred while updating the user" });
+      res.status(500).json({
+        message: "An unknown error occurred while deleting the user",
+      });
     }
   }
 };
@@ -286,31 +300,6 @@ export const resetEmail = async (req: Request, res: Response) => {
     } else {
       res.status(500).json({
         message: "An unknown error occurred while resetting the email",
-      });
-    }
-  }
-};
-
-export const deleteUser = async (
-  req: Request & { session: SessionData },
-  res: Response
-) => {
-  // Check if user is admin
-  if (!req.session.isAdmin) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-
-  const { userId } = req.params;
-
-  try {
-    await User.findByIdAndDelete(userId);
-    return res.json({ message: "User deleted successfully" });
-  } catch (err) {
-    if (err instanceof Error) {
-      res.status(500).json({ message: err.message });
-    } else {
-      res.status(500).json({
-        message: "An unknown error occurred while deleting the user",
       });
     }
   }
