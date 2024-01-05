@@ -3,7 +3,7 @@ import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from "uuid";
 import User from "../models/User";
 import { User as UserInterface } from "../types/user";
-import { sendVerificationEmail } from "../services/emailVerification";
+import sendVerificationEmail from "../services/emailVerification";
 
 export const getUsers = async (req: Request, res: Response) => {
   try {
@@ -182,14 +182,15 @@ export const logoutUser = async (req: Request, res: Response) => {
 };
 
 export const deleteUser = async (req: Request, res: Response) => {
-  // Check if user is admin
-  if (!req.session.isAdmin) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-
   const { userId } = req.params;
 
   try {
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
     await User.findByIdAndDelete(userId);
     return res.json({ message: "User deleted successfully" });
   } catch (err) {

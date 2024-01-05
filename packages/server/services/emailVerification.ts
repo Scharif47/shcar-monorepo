@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 
-export const sendVerificationEmail = async (
+const sendVerificationEmail = async (
   email: string,
   emailVerificationToken: string
 ) => {
@@ -26,3 +26,5 @@ export const sendVerificationEmail = async (
 
   console.log(`Message sent: ${info.messageId}`);
 };
+
+export default sendVerificationEmail;
