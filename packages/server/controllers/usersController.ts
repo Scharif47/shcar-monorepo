@@ -1,11 +1,17 @@
 import { Request, Response, NextFunction } from "express";
 import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from "uuid";
+import { validationResult } from "express-validator";
 import User from "../models/User";
 import { User as UserInterface } from "../types/user";
 import sendVerificationEmail from "../services/emailVerification";
 
 export const getUsers = async (req: Request, res: Response) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
   try {
     const users = await User.find();
     res.json(users);
