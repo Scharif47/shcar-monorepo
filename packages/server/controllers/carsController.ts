@@ -35,7 +35,7 @@ export const createCar = async (req: Request, res: Response) => {
 
 export const updateCar = async (req: Request, res: Response) => {
   try {
-    const car = Car.findByIdAndUpdate(req.params.id, req.body, {
+    const car = await Car.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true,
     });

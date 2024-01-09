@@ -1,12 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import User from "../models/User";
 
-const isAdmin = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  const { userId } = req.params;
+const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
+  const { userId } = req.session;
 
   try {
     const user = await User.findById(userId);

@@ -10,5 +10,6 @@ export interface User extends Document {
   isAdmin: boolean;
   isVerified: boolean;
   emailVerificationToken?: string;
+  tokenExpiration?: Date;
   parklist?: Schema.Types.ObjectId[];
 }

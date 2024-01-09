@@ -48,39 +48,35 @@ export const getUser = async (req: Request, res: Response) => {
 };
 
 export const updateUser = async (req: Request, res: Response) => {
-  const { userId } = req.session;
-
-  if (!userId) {
-    return res.status(401).json({ message: "Unauthorized" });
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
   }
 
-  const updates = req.body;
+  const { id } = req.params;
+  const updateData = req.body;
 
   try {
-    const user = (await User.findByIdAndUpdate(userId, updates, {
-      new: true,
-    })) as UserInterface;
-
+    const user = await User.findByIdAndUpdate(id, updateData, { new: true });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    return res.json(user);
+    res.json(user);
   } catch (err) {
     if (err instanceof Error) {
       res.status(500).json({ message: err.message });
     } else {
-      res
-        .status(500)
-        .json({ message: "An unknown error occurred while updating the user" });
+      res.status(500).json({
+        message: "An unknown error occurred while updating the user",
+      });
     }
   }
 };
 
 export const registerUser = async (
   req: Request,
-  res: Response,
-  next: NextFunction
+  res: Response
 ): Promise<Response | void> => {
   const { userName, password, email, authMethod, googleId, accessToken } =
     req.body;
@@ -89,7 +85,7 @@ export const registerUser = async (
   if (!userName || !password || !email || !authMethod) {
     return res
       .status(400)
-      .json({ message: "Missing required regiistration field" });
+      .json({ message: "Missing required registration field" });
   }
 
   try {
@@ -108,6 +104,11 @@ export const registerUser = async (
       passwordHashed = await bcrypt.hash(password, saltRound);
     }
 
+    // Generate email verification token
+    const emailVerificationToken = uuidv4();
+    const tokenExpiration = new Date();
+    tokenExpiration.setDate(tokenExpiration.getDate() + 7); // Token expires in 1 week
+
     // Create user
     const user = new User({
       userName,
@@ -116,11 +117,17 @@ export const registerUser = async (
       authMethod,
       googleId,
       accessToken,
+      emailVerificationToken,
+      tokenExpiration,
+      isVerified: false,
     });
     const newUser = await user.save();
 
     // Create a session for the user
     req.session.userId = newUser._id.toString();
+
+    // Send verification email
+    await sendVerificationEmail(user.email, emailVerificationToken);
 
     res.status(201).json({
       id: newUser._id,
@@ -211,36 +218,44 @@ export const deleteUser = async (req: Request, res: Response) => {
 };
 
 export const verifyUser = async (req: Request, res: Response) => {
-  const { userId } = req.params;
+  const { token } = req.params;
 
   try {
-    const user = (await User.findByIdAndUpdate(
-      userId,
-      { isVerified: true },
-      { new: true }
-    )) as UserInterface;
+    const user = await User.findOne({ emailVerificationToken: token });
 
     if (!user) {
-      return res.status(400).json({ message: "User not found" });
+      return res.status(400).json({ message: "Invalid or expired token" });
     }
 
-    res.json({ message: "User verified successfully" });
+    // Check if the token has expired
+    if (user.tokenExpiration && new Date() > user.tokenExpiration) {
+      return res.status(400).json({ message: "Token expired" });
+    }
+
+    // If the token is valid and not expired, verify the user's email
+    user.isVerified = true;
+    user.emailVerificationToken = null;
+    user.tokenExpiration = null;
+    await user.save();
+
+    res.json({ message: "Email verified successfully" });
   } catch (err) {
     if (err instanceof Error) {
       res.status(500).json({ message: err.message });
     } else {
       res.status(500).json({
-        message: "An unknown error occurred while verifying the user",
+        message: "An unknown error occurred while verifying the email",
       });
     }
   }
 };
 
 export const resetPassword = async (req: Request, res: Response) => {
-  const { email, newPasswort } = req.body;
+  const { id } = req.params;
+  const { newPasswort } = req.body;
 
   try {
-    const user = (await User.findOne({ email })) as UserInterface;
+    const user = (await User.findById(id)) as UserInterface;
 
     if (!user) {
       return res.status(400).json({ message: "User not found" });
@@ -271,10 +286,11 @@ export const resetPassword = async (req: Request, res: Response) => {
 };
 
 export const resetEmail = async (req: Request, res: Response) => {
-  const { email, newEmail } = req.body;
+  const { id } = req.params;
+  const { newEmail } = req.body;
 
   try {
-    const user = (await User.findOne({ email })) as UserInterface;
+    const user = (await User.findById(id)) as UserInterface;
 
     if (!user) {
       return res.status(400).json({ message: "User not found" });
@@ -289,11 +305,14 @@ export const resetEmail = async (req: Request, res: Response) => {
 
     // Generate email verification token
     const emailVerificationToken = uuidv4();
+    const tokenExpiration = new Date();
+    tokenExpiration.setDate(tokenExpiration.getDate() + 7); // Token expires in 1 week
 
     // Update user's email and set as not verified
     user.email = newEmail;
     user.isVerified = false;
     user.emailVerificationToken = emailVerificationToken;
+    user.tokenExpiration = tokenExpiration;
     await user.save();
 
     // Send verification email to new email
@@ -307,6 +326,46 @@ export const resetEmail = async (req: Request, res: Response) => {
     } else {
       res.status(500).json({
         message: "An unknown error occurred while resetting the email",
+      });
+    }
+  }
+};
+
+export const requestNewVerificationEmail = async (
+  req: Request,
+  res: Response
+) => {
+  const { email } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(400).json({ message: "User not found" });
+    }
+
+    // Generate new email verification token
+    const emailVerificationToken = uuidv4();
+    const tokenExpiration = new Date();
+    tokenExpiration.setDate(tokenExpiration.getDate() + 7); // Token expires in 1 week
+
+    user.emailVerificationToken = emailVerificationToken;
+    user.tokenExpiration = tokenExpiration;
+    await user.save();
+
+    // Send verification email
+    await sendVerificationEmail(user.email, emailVerificationToken);
+
+    res.json({
+      message: "New verification email sent. Please check your inbox.",
+    });
+  } catch (err) {
+    if (err instanceof Error) {
+      res.status(500).json({ message: err.message });
+    } else {
+      res.status(500).json({
+        message:
+          "An unknown error occurred while sending the verification email",
       });
     }
   }

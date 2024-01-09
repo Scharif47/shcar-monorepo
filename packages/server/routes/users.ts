@@ -11,6 +11,7 @@ import {
   verifyUser,
   resetPassword,
   resetEmail,
+  requestNewVerificationEmail,
 } from "../controllers/usersController";
 import verifySession from "../middlewares/verifySession";
 import verifySelf from "../middlewares/verifySelf";
@@ -24,11 +25,12 @@ router.get(
   getUsers
 );
 router.get("/user/:id", verifySession, getUser);
-router.put("/updateUser", verifySession, verifySelf, updateUser);
+router.put("/updateUser/:id", verifySession, verifySelf, updateUser);
 router.post("/register", registerUser);
 router.post("login", loginUser);
 router.post("/logout", verifySession, logoutUser);
 router.delete("/deleteUser/:id", verifySession, isAdmin, deleteUser);
-router.post("/verifvyUser", verifyUser);
-router.put("/resetPassword", resetPassword);
-router.put("/resetEmail", resetEmail);
+router.get("/verify/:token", verifyUser);
+router.put("/resetPassword/:id", resetPassword);
+router.put("/resetEmail/:id", resetEmail);
+router.post("/requestNewVerificationEmail", requestNewVerificationEmail);
