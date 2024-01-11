@@ -7,11 +7,6 @@ import { User as UserInterface } from "../types/user";
 import sendVerificationEmail from "../services/emailVerification";
 
 export const getUsers = async (req: Request, res: Response) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-
   try {
     const users = await User.find();
     res.json(users);
@@ -27,6 +22,11 @@ export const getUsers = async (req: Request, res: Response) => {
 };
 
 export const getUser = async (req: Request, res: Response) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
   const { userId } = req.session;
 
   if (!userId) {
@@ -146,6 +146,11 @@ export const registerUser = async (
 };
 
 export const loginUser = async (req: Request, res: Response) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
   const { userName, password } = req.body;
 
   if (!userName || !password) {
@@ -179,6 +184,11 @@ export const loginUser = async (req: Request, res: Response) => {
 };
 
 export const logoutUser = async (req: Request, res: Response) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
   if (req.session) {
     req.session.destroy((err) => {
       if (err) {
@@ -195,6 +205,11 @@ export const logoutUser = async (req: Request, res: Response) => {
 };
 
 export const deleteUser = async (req: Request, res: Response) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
   const { userId } = req.params;
 
   try {
@@ -218,6 +233,11 @@ export const deleteUser = async (req: Request, res: Response) => {
 };
 
 export const verifyUser = async (req: Request, res: Response) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
   const { token } = req.params;
 
   try {
@@ -251,6 +271,11 @@ export const verifyUser = async (req: Request, res: Response) => {
 };
 
 export const resetPassword = async (req: Request, res: Response) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
   const { id } = req.params;
   const { newPasswort } = req.body;
 
@@ -286,6 +311,11 @@ export const resetPassword = async (req: Request, res: Response) => {
 };
 
 export const resetEmail = async (req: Request, res: Response) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
   const { id } = req.params;
   const { newEmail } = req.body;
 
@@ -335,6 +365,11 @@ export const requestNewVerificationEmail = async (
   req: Request,
   res: Response
 ) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
   const { email } = req.body;
 
   try {
